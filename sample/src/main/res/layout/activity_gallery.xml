@@ -16,12 +16,13 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center" />
 
-        <SeekBar
-            android:id="@+id/seekBar"
+
+        <LinearLayout
+            android:id="@+id/seek_bar_cont"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
-            android:max="100" />
+            android:orientation="vertical" />
     </FrameLayout>
 
     <LinearLayout

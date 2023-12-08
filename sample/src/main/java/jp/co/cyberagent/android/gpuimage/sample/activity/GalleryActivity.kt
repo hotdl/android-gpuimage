@@ -19,38 +19,39 @@ package jp.co.cyberagent.android.gpuimage.sample.activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import android.widget.SeekBar
-import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import jp.co.cyberagent.android.gpuimage.GPUImageView
 import jp.co.cyberagent.android.gpuimage.filter.GPUImageFilter
-import jp.co.cyberagent.android.gpuimage.sample.GPUImageFilterTools
-import jp.co.cyberagent.android.gpuimage.sample.GPUImageFilterTools.FilterAdjuster
 import jp.co.cyberagent.android.gpuimage.sample.R
+import jp.co.cyberagent.android.gpuimage.sample.utils.FilterAdjuster
+import jp.co.cyberagent.android.gpuimage.sample.utils.GPUImageFilterHelper
+import jp.co.cyberagent.android.gpuimage.sample.widget.ParamSeekBar
 
 class GalleryActivity : AppCompatActivity() {
 
     private var filterAdjuster: FilterAdjuster? = null
     private val gpuImageView: GPUImageView by lazy { findViewById<GPUImageView>(R.id.gpuimage) }
-    private val seekBar: SeekBar by lazy { findViewById<SeekBar>(R.id.seekBar) }
+    private val seekBarCont: ViewGroup by lazy { findViewById<ViewGroup>(R.id.seek_bar_cont) }
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gallery)
 
-        seekBar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                filterAdjuster?.adjust(progress)
-                gpuImageView.requestRender()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+//        seekBar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
+//            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+//                filterAdjuster?.adjust(progress)
+//                gpuImageView.requestRender()
+//            }
+//
+//            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+//            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+//        })
 
         findViewById<View>(R.id.button_choose_filter).setOnClickListener {
-            GPUImageFilterTools.showDialog(this) { filter ->
+            GPUImageFilterHelper.showDialog(this) { filter ->
                 switchFilterTo(filter)
                 gpuImageView.requestRender()
             }
@@ -89,11 +90,34 @@ class GalleryActivity : AppCompatActivity() {
         if (gpuImageView.filter == null || gpuImageView.filter.javaClass != filter.javaClass) {
             gpuImageView.filter = filter
             filterAdjuster = FilterAdjuster(filter)
-            if (filterAdjuster!!.canAdjust()) {
-                seekBar.visibility = View.VISIBLE
-                filterAdjuster!!.adjust(seekBar.progress)
+            if (filterAdjuster?.params() != null) {
+                seekBarCont.visibility = View.VISIBLE
+                seekBarCont.removeAllViews()
+                val adjusterParams = filterAdjuster?.params()!!
+                val paramSeekBars = adjusterParams.mapIndexed { index, adjusterParam ->
+                    ParamSeekBar(seekBarCont).also {
+                        seekBarCont.addView(it.root)
+                        it.tvName.text = adjusterParam.name
+                        it.seekBar.progress = adjusterParam.defaultProgress
+                        it.seekBar.setOnSeekBarChangeListener(object :
+                            SeekBar.OnSeekBarChangeListener {
+                            override fun onProgressChanged(
+                                seekBar: SeekBar?,
+                                progress: Int,
+                                fromUser: Boolean
+                            ) {
+                                filterAdjuster?.adjust(index, progress / 100.0f)
+                                gpuImageView.requestRender()
+                            }
+
+                            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                        })
+                    }
+                }
+                filterAdjuster!!.adjust(paramSeekBars.map { it.seekBar.progress / 100.0f })
             } else {
-                seekBar.visibility = View.GONE
+                seekBarCont.visibility = View.GONE
             }
         }
     }
